@@ -44,10 +44,13 @@ npx --yes web-ext sign \
   --ignore-files install.sh build.sh sign.sh README.md LICENSE .gitignore \
   '.github/**' 'native-messaging/**' 'dist/**'
 
+latest=$(find "$SCRIPT_DIR/dist" -maxdepth 1 -name '*.xpi' -printf '%T@ %p\n' |
+  sort -n | tail -n1 | cut -d' ' -f2-)
+
 cat <<EOF
 
 Signed package written to $SCRIPT_DIR/dist/
 Install it permanently with:
-  firefox "$(ls -t "$SCRIPT_DIR"/dist/*.xpi | head -n1)"
+  firefox "${latest:-dist/<addon>.xpi}"
 or about:addons -> gear icon -> "Install Add-on From File…"
 EOF

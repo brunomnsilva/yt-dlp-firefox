@@ -4,6 +4,6 @@
   "path": "__HOST_PATH__",
   "type": "stdio",
   "allowed_extensions": [
-    "yt-dlp@omarchy.local"
+    "__EXT_ID__"
   ]
 }

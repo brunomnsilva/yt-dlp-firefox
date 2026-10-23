@@ -66,7 +66,7 @@ install_host() {
     exit 1
   }
   check_deps
-  manifest=$(sed "s|__HOST_PATH__|$path|g" "$TEMPLATE")
+  manifest=$(sed -e "s|__HOST_PATH__|$path|g" -e "s|__EXT_ID__|$EXT_ID|g" "$TEMPLATE")
 
   while IFS= read -r dir; do
     mkdir -p "$dir"
