@@ -14,10 +14,11 @@ TEMPLATE="$SCRIPT_DIR/native-messaging/$HOST_NAME.json"
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--zip] [--uninstall]
+Usage: $(basename "$0") [--zip] [--check] [--uninstall]
 
   (no args)    install the native messaging host manifest for Firefox
   --zip        also build dist/$HOST_NAME-<version>.zip for about:debugging
+  --check      report whether the host and manifest are correctly registered
   --uninstall  remove the Firefox native messaging host manifest
 EOF
 }
@@ -37,10 +38,19 @@ host_path() {
 
 host_dirs() {
   printf '%s\n' "$HOME/.mozilla/native-messaging-hosts"
-  # Flatpak Firefox keeps its own ~/.mozilla inside the sandbox home.
+  # Firefox keeps native manifests on the legacy path for now, but bug 2005167
+  # proposes moving them under the XDG config dir. Register both so this keeps
+  # working when that lands.
+  printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/mozilla/native-messaging-hosts"
+  # Flatpak Firefox keeps its own home inside the sandbox.
   if [[ -d $HOME/.var/app/org.mozilla.firefox ]]; then
     printf '%s\n' "$HOME/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts"
+    printf '%s\n' "$HOME/.var/app/org.mozilla.firefox/.config/mozilla/native-messaging-hosts"
   fi
+}
+
+render_manifest() {
+  sed -e "s|__HOST_PATH__|$1|g" -e "s|__EXT_ID__|$EXT_ID|g" "$TEMPLATE"
 }
 
 check_deps() {
@@ -66,7 +76,7 @@ install_host() {
     exit 1
   }
   check_deps
-  manifest=$(sed -e "s|__HOST_PATH__|$path|g" -e "s|__EXT_ID__|$EXT_ID|g" "$TEMPLATE")
+  manifest=$(render_manifest "$path")
 
   while IFS= read -r dir; do
     mkdir -p "$dir"
@@ -88,6 +98,45 @@ For a permanent install, run ./sign.sh and then install the signed .xpi
 EOF
 }
 
+check_host() {
+  local path manifest dir file status=0 found=false
+
+  printf 'Native messaging host: %s\n' "$HOST_NAME"
+
+  if path=$(host_path); then
+    printf '  executable: %s\n' "$path"
+  else
+    printf '  executable: NOT FOUND (looked under %s/bin and /usr/bin)\n' "$OMARCHY_PATH"
+    status=1
+  fi
+
+  manifest=""
+  if [[ -n $path ]]; then
+    manifest=$(render_manifest "$path")
+  fi
+
+  while IFS= read -r dir; do
+    file="$dir/$HOST_NAME.json"
+    [[ -f $file ]] || continue
+    found=true
+    if [[ -n $manifest ]] && diff -q <(printf '%s\n' "$manifest") "$file" >/dev/null; then
+      printf '  manifest:   %s (ok)\n' "$file"
+    else
+      printf '  manifest:   %s (stale, re-run %s)\n' "$file" "$(basename "$0")"
+      status=1
+    fi
+  done < <(host_dirs)
+
+  if ! $found; then
+    printf '  manifest:   not installed\n'
+    printf '\nRun ./install.sh first, then restart Firefox before trying again.\n'
+    status=1
+  fi
+
+  check_deps
+  return "$status"
+}
+
 uninstall_host() {
   local dir
   while IFS= read -r dir; do
@@ -103,6 +152,9 @@ zip_requested=false
 for arg in "$@"; do
   case $arg in
   --zip) zip_requested=true ;;
+  --check)
+    if check_host; then exit 0; else exit 1; fi
+    ;;
   --uninstall)
     uninstall_host
     exit 0
