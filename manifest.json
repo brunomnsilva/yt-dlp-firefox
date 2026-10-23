@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Download Video",
+  "version": "1.0",
+  "description": "Download the current page's video with yt-dlp. Firefox port of Omarchy's Chromium extension.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "yt-dlp@omarchy.local",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "permissions": ["activeTab", "scripting", "nativeMessaging"],
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "action": {
+    "default_title": "Download Video",
+    "default_icon": {
+      "16": "icon-16.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
+  },
+  "commands": {
+    "download-video": {
+      "suggested_key": {"default": "Alt+Shift+D"},
+      "description": "Download Video"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"]
+  }
+}

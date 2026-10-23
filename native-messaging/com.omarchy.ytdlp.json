@@ -1,0 +1,9 @@
+{
+  "name": "com.omarchy.ytdlp",
+  "description": "Omarchy yt-dlp download host (Firefox)",
+  "path": "__HOST_PATH__",
+  "type": "stdio",
+  "allowed_extensions": [
+    "yt-dlp@omarchy.local"
+  ]
+}

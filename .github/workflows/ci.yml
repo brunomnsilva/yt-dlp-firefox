@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate JSON files
+        run: |
+          python3 -m json.tool manifest.json > /dev/null
+          python3 -m json.tool native-messaging/com.omarchy.ytdlp.json > /dev/null
+
+      - name: Check background script syntax
+        run: node --check background.js
+
+      - name: Lint with web-ext
+        run: |
+          npx --yes web-ext lint \
+            --source-dir . \
+            --ignore-files 'install.sh' 'build.sh' 'sign.sh' 'README.md' \
+            'LICENSE' '.gitignore' '.github/**' 'native-messaging/**' 'dist/**'
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: shellcheck install.sh build.sh sign.sh
+
+  build:
+    name: Build zip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: ./build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yt-dlp-firefox
+          path: dist/*.zip
+          if-no-files-found: error
